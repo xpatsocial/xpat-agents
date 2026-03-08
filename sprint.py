@@ -121,8 +121,12 @@ Respond in JSON:
         result = results.get(agent_name, "[No output]")
         deliverable_type = task.get("deliverable", "document")
 
-        # Save to file
-        filename = f"{agent_name}-{deliverable_type.replace(' ', '-').lower()}.md"
+        # Save to file (sanitize filename for Windows)
+        safe_name = deliverable_type.replace(' ', '-').lower()
+        for ch in [':', '/', '\\', '*', '?', '"', '<', '>', '|']:
+            safe_name = safe_name.replace(ch, '')
+        safe_name = safe_name[:60]  # limit length
+        filename = f"{agent_name}-{safe_name}.md"
         filepath = os.path.join(sprint_dir, filename)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(f"# {AGENTS[agent_name]['name']} -- {deliverable_type}\n")
