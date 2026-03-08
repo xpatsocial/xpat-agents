@@ -1,6 +1,9 @@
-"""x/pat AI Agent Team — Core Agent Runner"""
+"""x/pat AI Agent Team — Core Agent Runner with Parallel Execution"""
 
 import json
+import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import anthropic
 from config import AGENTS, MAX_TOKENS
 
@@ -26,12 +29,60 @@ def run_agent(agent_name: str, prompt: str, conversation: list | None = None) ->
     return response.content[0].text
 
 
+def run_agents_parallel(tasks: list[dict]) -> dict:
+    """
+    Run multiple agents concurrently.
+
+    Args:
+        tasks: List of {"agent": "name", "task": "prompt"} dicts
+
+    Returns:
+        Dict of {agent_name: response_text}
+    """
+    results = {}
+    start = time.time()
+
+    with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
+        futures = {}
+        for t in tasks:
+            agent_name = t["agent"]
+            task_desc = t["task"]
+            print(f"  ⚡ Launching {AGENTS[agent_name]['name']}...")
+            future = pool.submit(run_agent, agent_name, task_desc)
+            futures[future] = agent_name
+
+        for future in as_completed(futures):
+            agent_name = futures[future]
+            elapsed = time.time() - start
+            try:
+                results[agent_name] = future.result()
+                print(f"  ✓ {AGENTS[agent_name]['name']} done ({elapsed:.1f}s)")
+            except Exception as e:
+                results[agent_name] = f"[ERROR] {e}"
+                print(f"  ✗ {AGENTS[agent_name]['name']} failed: {e}")
+
+    total = time.time() - start
+    print(f"\n  All agents finished in {total:.1f}s")
+    return results
+
+
+def run_all_agents(prompt: str) -> dict:
+    """Send the same prompt to ALL specialist agents in parallel."""
+    tasks = [{"agent": name, "task": prompt} for name in AGENTS if name != "ceo"]
+    return run_agents_parallel(tasks)
+
+
 def run_ceo(goal: str) -> dict:
     """
-    Run the CEO orchestrator: it breaks down a goal into tasks,
-    delegates to specialist agents, and synthesizes results.
+    CEO orchestrator: breaks down a goal, delegates to agents IN PARALLEL,
+    then synthesizes all results.
     """
-    # Step 1: CEO breaks down the goal
+    print(f"\n{'='*60}")
+    print(f"  CEO ORCHESTRATING: {goal[:70]}...")
+    print(f"{'='*60}\n")
+
+    # Step 1: CEO plans the delegation
+    print("  [1/3] CEO planning delegation...\n")
     delegation_prompt = f"""Given this business goal, break it down into specific tasks for the specialist agents.
 
 GOAL: {goal}
@@ -57,9 +108,8 @@ Only assign tasks that are relevant to the goal. Be specific in each task descri
 
     ceo_response = run_agent("ceo", delegation_prompt)
 
-    # Parse the CEO's delegation plan
+    # Parse
     try:
-        # Extract JSON from response (handle markdown code blocks)
         json_str = ceo_response
         if "```json" in json_str:
             json_str = json_str.split("```json")[1].split("```")[0]
@@ -73,15 +123,13 @@ Only assign tasks that are relevant to the goal. Be specific in each task descri
             "results": {},
         }
 
-    # Step 2: Execute each delegated task
-    results = {}
-    for task in plan.get("tasks", []):
-        agent_name = task["agent"]
-        task_desc = task["task"]
-        print(f"  → Delegating to {AGENTS[agent_name]['name']}: {task_desc[:80]}...")
-        results[agent_name] = run_agent(agent_name, task_desc)
+    # Step 2: Execute ALL delegated tasks in parallel
+    tasks = plan.get("tasks", [])
+    print(f"  [2/3] Dispatching {len(tasks)} agents in parallel...\n")
+    results = run_agents_parallel(tasks)
 
-    # Step 3: CEO synthesizes all results
+    # Step 3: CEO synthesizes
+    print(f"\n  [3/3] CEO synthesizing results...\n")
     synthesis_prompt = f"""Original goal: {goal}
 
 Your delegation plan: {plan.get('plan', '')}
@@ -91,13 +139,13 @@ Results from your team:
     for agent_name, result in results.items():
         synthesis_prompt += f"\n--- {AGENTS[agent_name]['name']} ---\n{result}\n"
 
-    synthesis_prompt += "\nSynthesize these results into a clear, actionable executive summary with next steps."
+    synthesis_prompt += "\nSynthesize these results into a clear, actionable executive summary with prioritized next steps."
 
     synthesis = run_agent("ceo", synthesis_prompt)
 
     return {
         "plan": plan.get("plan", ""),
-        "tasks": plan.get("tasks", []),
+        "tasks": tasks,
         "results": results,
         "synthesis": synthesis,
     }
