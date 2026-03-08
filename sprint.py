@@ -1,4 +1,4 @@
-"""x/pat AI Agent Team — Sprint Runner with Approval Pipeline"""
+"""x/pat AI Agent Team -- Sprint Runner with Approval Pipeline"""
 
 import json
 import os
@@ -49,7 +49,7 @@ def run_sprint(goal: str, sprint_name: str | None = None):
     print(f"  GOAL: {goal}")
     print(f"{'='*60}\n")
 
-    # ── Phase 1: CEO Plans ──
+    # -- Phase 1: CEO Plans --
     print("  Phase 1: CEO planning delegation...\n")
 
     plan_prompt = f"""You are running Sprint "{sprint_id}" for x/pat.
@@ -57,7 +57,7 @@ def run_sprint(goal: str, sprint_name: str | None = None):
 GOAL: {goal}
 
 Break this into CONCRETE deliverables for each agent. Each task should produce a specific output
-(code, document, analysis, etc.) — not just a plan or suggestion.
+(code, document, analysis, etc.) -- not just a plan or suggestion.
 
 Available agents:
 - product: Feature specs, user stories, acceptance criteria, roadmap docs
@@ -66,6 +66,11 @@ Available agents:
 - marketing: Landing page copy, email templates, social content, growth plans
 - research: Market analysis, competitor breakdowns, partnership recommendations
 - qa: Test plans, security audits, review checklists
+- growth: Acquisition funnels, viral mechanics, referral programs
+- content: Social media posts, blog articles, newsletters
+- design: UI specs, wireframes, UX flows
+- legal: Terms of service, privacy policy, compliance docs
+- devops: CI/CD pipelines, deployment configs, monitoring
 
 Respond in JSON:
 {{
@@ -90,25 +95,25 @@ Respond in JSON:
         plan = json.loads(json_str.strip())
     except (json.JSONDecodeError, IndexError):
         # Save raw response if JSON parsing fails
-        with open(os.path.join(sprint_dir, "ceo-raw-plan.md"), "w") as f:
+        with open(os.path.join(sprint_dir, "ceo-raw-plan.md"), "w", encoding="utf-8") as f:
             f.write(ceo_response)
         print("  CEO response saved but couldn't auto-parse. Check ceo-raw-plan.md")
         return {"sprint_id": sprint_id, "error": "plan_parse_failed"}
 
     # Save the plan
-    with open(os.path.join(sprint_dir, "plan.json"), "w") as f:
+    with open(os.path.join(sprint_dir, "plan.json"), "w", encoding="utf-8") as f:
         json.dump(plan, f, indent=2)
 
     print(f"  Plan: {plan.get('plan', '')[:80]}...")
     print(f"  Tasks: {len(plan.get('tasks', []))} deliverables\n")
 
-    # ── Phase 2: All Agents Execute in Parallel ──
+    # -- Phase 2: All Agents Execute in Parallel --
     tasks = plan.get("tasks", [])
     print(f"  Phase 2: Dispatching {len(tasks)} agents in parallel...\n")
 
     results = run_agents_parallel(tasks)
 
-    # ── Phase 3: Save deliverables + queue for review ──
+    # -- Phase 3: Save deliverables + queue for review --
     print(f"\n  Phase 3: Queuing deliverables for CEO review...\n")
 
     for task in tasks:
@@ -120,7 +125,7 @@ Respond in JSON:
         filename = f"{agent_name}-{deliverable_type.replace(' ', '-').lower()}.md"
         filepath = os.path.join(sprint_dir, filename)
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write(f"# {AGENTS[agent_name]['name']} — {deliverable_type}\n")
+            f.write(f"# {AGENTS[agent_name]['name']} -- {deliverable_type}\n")
             f.write(f"**Sprint:** {sprint_id}\n")
             f.write(f"**Task:** {task['task']}\n")
             f.write(f"**Generated:** {datetime.now().isoformat()}\n\n---\n\n")
@@ -138,11 +143,11 @@ Respond in JSON:
             "created": datetime.now().isoformat(),
         }
         queue["pending"].append(queue_item)
-        print(f"  📋 Queued #{queue_item['id']}: [{agent_name}] {deliverable_type}")
+        print(f"  Queued #{queue_item['id']}: [{agent_name}] {deliverable_type}")
 
     save_queue(queue)
 
-    # ── Phase 4: CEO Synthesis ──
+    # -- Phase 4: CEO Synthesis --
     print(f"\n  Phase 4: CEO generating executive brief...\n")
 
     brief_prompt = f"""Sprint "{sprint_id}" is complete. Here are the deliverables from your team:
@@ -160,14 +165,14 @@ Write an EXECUTIVE BRIEF with:
 4. Recommended next sprint goals
 5. Risk flags (anything concerning)
 
-Keep it concise — this is a CEO briefing, not a novel."""
+Keep it concise -- this is a CEO briefing, not a novel."""
 
     brief = run_agent("ceo", brief_prompt)
 
     # Save brief
     brief_path = os.path.join(sprint_dir, "executive-brief.md")
     with open(brief_path, "w", encoding="utf-8") as f:
-        f.write(f"# Executive Brief — {sprint_id}\n")
+        f.write(f"# Executive Brief -- {sprint_id}\n")
         f.write(f"**Goal:** {goal}\n")
         f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n---\n\n")
         f.write(brief)
@@ -176,8 +181,8 @@ Keep it concise — this is a CEO briefing, not a novel."""
     print(f"  SPRINT COMPLETE: {sprint_id}")
     print(f"{'='*60}")
     print(f"\n{brief}\n")
-    print(f"  📁 All deliverables saved to: {sprint_dir}")
-    print(f"  📋 {len(tasks)} items in review queue — use 'review' to approve/reject")
+    print(f"  All deliverables saved to: {sprint_dir}")
+    print(f"  {len(tasks)} items in review queue -- use 'review' to approve/reject")
     print()
 
     return {
@@ -199,21 +204,21 @@ def show_review_queue():
     print(f"  REVIEW QUEUE")
     print(f"{'='*60}")
 
-    print(f"\n  ⏳ PENDING REVIEW ({len(pending)})")
-    print(f"  {'─'*45}")
+    print(f"\n  PENDING REVIEW ({len(pending)})")
+    print(f"  {'_'*45}")
     if not pending:
-        print("  (empty — all caught up)")
+        print("  (empty -- all caught up)")
     for item in pending:
         print(f"  #{item['id']:3d} [{item['agent']:10s}] {item['deliverable']}")
         print(f"       {item['task'][:55]}...")
 
-    print(f"\n  ✅ APPROVED ({len(approved)})")
-    print(f"  {'─'*45}")
+    print(f"\n  APPROVED ({len(approved)})")
+    print(f"  {'_'*45}")
     for item in approved[-5:]:  # Show last 5
         print(f"  #{item['id']:3d} [{item['agent']:10s}] {item['deliverable']}")
 
-    print(f"\n  ❌ REJECTED ({len(rejected)})")
-    print(f"  {'─'*45}")
+    print(f"\n  REJECTED ({len(rejected)})")
+    print(f"  {'_'*45}")
     for item in rejected[-5:]:
         print(f"  #{item['id']:3d} [{item['agent']:10s}] {item.get('reason', 'No reason')[:50]}")
 
@@ -239,15 +244,15 @@ def review_item(item_id: int, action: str, reason: str = ""):
     if action == "approve":
         item["status"] = "approved"
         queue["approved"].append(item)
-        print(f"  ✅ Approved #{item_id}: [{item['agent']}] {item['deliverable']}")
+        print(f"  [APPROVED] #{item_id}: [{item['agent']}] {item['deliverable']}")
     elif action == "reject":
         item["status"] = "rejected"
         item["reason"] = reason
         queue["rejected"].append(item)
-        print(f"  ❌ Rejected #{item_id}: {reason}")
+        print(f"  [REJECTED] #{item_id}: {reason}")
     elif action == "revise":
         # Send back to the agent with feedback
-        print(f"  🔄 Sending #{item_id} back to {item['agent']} for revision...")
+        print(f"  [REVISING] Sending #{item_id} back to {item['agent']}...")
         revision_prompt = f"""Your previous deliverable was sent back for revision.
 
 ORIGINAL TASK: {item['task']}
@@ -261,7 +266,7 @@ Please revise your work based on this feedback. Produce an improved version."""
         # Save revised version
         filepath = item["file"].replace(".md", "-revised.md")
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write(f"# REVISED — {AGENTS[item['agent']]['name']}\n")
+            f.write(f"# REVISED -- {AGENTS[item['agent']]['name']}\n")
             f.write(f"**Feedback:** {reason}\n\n---\n\n")
             f.write(revised)
 
@@ -269,8 +274,8 @@ Please revise your work based on this feedback. Produce an improved version."""
         item["status"] = "pending"
         item["revision"] = True
         queue["pending"].append(item)
-        print(f"  🔄 Revised deliverable re-queued as #{item['id']}")
-        print(f"  📄 Saved to: {filepath}")
+        print(f"  [REVISED] Deliverable re-queued as #{item['id']}")
+        print(f"  Saved to: {filepath}")
 
     save_queue(queue)
 
@@ -310,4 +315,4 @@ def approve_all():
         queue["approved"].append(item)
     queue["pending"] = []
     save_queue(queue)
-    print(f"  ✅ Approved all {count} pending deliverables.")
+    print(f"  [APPROVED] All {count} pending deliverables.")

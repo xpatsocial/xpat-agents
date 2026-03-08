@@ -47,7 +47,7 @@ def run_agents_parallel(tasks: list[dict]) -> dict:
         for t in tasks:
             agent_name = t["agent"]
             task_desc = t["task"]
-            print(f"  ⚡ Launching {AGENTS[agent_name]['name']}...")
+            print(f"  > Launching {AGENTS[agent_name]['name']}...")
             future = pool.submit(run_agent, agent_name, task_desc)
             futures[future] = agent_name
 
@@ -56,10 +56,10 @@ def run_agents_parallel(tasks: list[dict]) -> dict:
             elapsed = time.time() - start
             try:
                 results[agent_name] = future.result()
-                print(f"  ✓ {AGENTS[agent_name]['name']} done ({elapsed:.1f}s)")
+                print(f"  [OK]{AGENTS[agent_name]['name']} done ({elapsed:.1f}s)")
             except Exception as e:
                 results[agent_name] = f"[ERROR] {e}"
-                print(f"  ✗ {AGENTS[agent_name]['name']} failed: {e}")
+                print(f"  [FAIL]{AGENTS[agent_name]['name']} failed: {e}")
 
     total = time.time() - start
     print(f"\n  All agents finished in {total:.1f}s")
